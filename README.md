@@ -6,7 +6,9 @@ Demo page of running Linux-based containers on browser using [QEMU Wasm](https:/
 
 ## Building images
 
-- Clone qemu-wasm repo and set the directory path to `QEMU_WASM_REPO`.
+- Clone qemu-wasm repo and set the directory path to `QEMU_WASM_REPO` and `QEMU_WASM_REPO_EXAMPLE`.
+  - `QEMU_WASM_REPO_EXAMPLE` needs to be the master branch of https://github.com/ktock/qemu-wasm/
+  - `QEMU_WASM_REPO` needs to be set to the branch https://github.com/ktock/qemu-wasm/pull/21
 
 ```
 ./create-images.sh
