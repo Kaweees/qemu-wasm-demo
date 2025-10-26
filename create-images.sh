@@ -25,12 +25,12 @@ docker exec "${BUILD_CONTAINER_NAME}" emmake make -j $(nproc) qemu-system-aarch6
 
 TMPDIR=$(mktemp -d)
 
-mkdir "${TMPDIR}/pack"
+mkdir -p "${TMPDIR}/pack"
 docker build --output=type=local,dest="${TMPDIR}/pack" "${QEMU_WASM_REPO_V}"/examples/raspi3ap/image/
 docker cp "${TMPDIR}/pack" "${BUILD_CONTAINER_NAME}":/
 docker exec "${BUILD_CONTAINER_NAME}" /bin/sh -c "/emsdk/upstream/emscripten/tools/file_packager.py qemu-system-aarch64.data --preload /pack > load.js"
 
-mkdir "${DEST}/raspi3ap"
+mkdir -p "${DEST}/raspi3ap"
 docker cp "${BUILD_CONTAINER_NAME}":/build/qemu-system-aarch64 "${DEST}/raspi3ap/out.js"
 for f in qemu-system-aarch64.wasm qemu-system-aarch64.worker.js qemu-system-aarch64.data load.js ; do
     docker cp "${BUILD_CONTAINER_NAME}":/build/${f} "${DEST}/raspi3ap/"
@@ -43,9 +43,9 @@ docker exec "${BUILD_CONTAINER_NAME}" emconfigure /qemu/configure --static --tar
        --extra-cflags="$EXTRA_CFLAGS" --extra-cxxflags="$EXTRA_CFLAGS" --extra-ldflags="-sEXPORTED_RUNTIME_METHODS=getTempRet0,setTempRet0,addFunction,removeFunction,TTY,FS"
 docker exec "${BUILD_CONTAINER_NAME}" emmake make -j $(nproc) qemu-system-x86_64
 
-mkdir "${DEST}/alpine-x86_64"
+mkdir -p "${DEST}/alpine-x86_64"
 
-mkdir "${TMPDIR}"/{pack-kernel,pack-initramfs,pack-rootfs,pack-rom}
+mkdir -p "${TMPDIR}"/{pack-kernel,pack-initramfs,pack-rootfs,pack-rom}
 docker build --progress=plain --build-arg PACKAGES="vim python3" --output type=local,dest="${TMPDIR}" "${QEMU_WASM_REPO_V}"/examples/x86_64-alpine/image/
 cp "${TMPDIR}"/vmlinuz-virt "${TMPDIR}"/pack-kernel/
 cp "${TMPDIR}"/initramfs-virt "${TMPDIR}"/pack-initramfs/
