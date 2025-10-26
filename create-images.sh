@@ -7,7 +7,7 @@ DEST=./out/
 QEMU_WASM_REPO_V="${QEMU_WASM_REPO}"
 BUILD_CONTAINER_NAME=build-qemu-wasm-demo
 
-mkdir "${DEST}"
+mkdir -p "${DEST}"
 ls "${DEST}"
 
 # raspi demo
