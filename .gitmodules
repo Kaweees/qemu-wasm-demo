@@ -1,3 +1,7 @@
 [submodule "docs/images"]
 	path = docs/images
 	url = https://github.com/ktock/qemu-wasm-demo-images.git
+[submodule "external/qemu-wasm"]
+	path = external/qemu-wasm
+	url = https://github.com/ktock/qemu-wasm
+	branch = master
