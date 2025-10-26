@@ -4,27 +4,31 @@ set -euo pipefail
 
 # SOURCE=./src/
 DEST=./out/
-QEMU_WASM_REPO_V="${QEMU_WASM_REPO}"
+QEMU_WASM_REPO_V=./external/qemu-wasm
 BUILD_CONTAINER_NAME=build-qemu-wasm-demo
 
 mkdir -p "${DEST}"
 ls "${DEST}"
 
+# Clean up any existing container with the same name
+docker stop "${BUILD_CONTAINER_NAME}" 2>/dev/null || true
+docker rm "${BUILD_CONTAINER_NAME}" 2>/dev/null || true
+
 # raspi demo
 docker build -t buildqemu-tmp - < "${QEMU_WASM_REPO_V}/Dockerfile"
-docker run --rm -d --name "${BUILD_CONTAINER_NAME}" -v "${QEMU_WASM_REPO_V}":/qemu/:ro buildqemu-tmp
+docker run --rm -d --name "${BUILD_CONTAINER_NAME}" -v "${QEMU_WASM_REPO_V}":/qemu/ buildqemu-tmp
 EXTRA_CFLAGS="-O3 -g -fno-inline-functions -Wno-error=unused-command-line-argument -matomics -mbulk-memory -DNDEBUG -DG_DISABLE_ASSERT -D_GNU_SOURCE -sASYNCIFY=1 -pthread -sPROXY_TO_PTHREAD=1 -sFORCE_FILESYSTEM -sALLOW_TABLE_GROWTH -sTOTAL_MEMORY=2300MB -sWASM_BIGINT -sMALLOC=emmalloc --js-library=/build/node_modules/xterm-pty/emscripten-pty.js -sEXPORT_ES6=1 "
-docker exec -it "${BUILD_CONTAINER_NAME}" emconfigure /qemu/configure --static --target-list=aarch64-softmmu --cpu=wasm32 --cross-prefix= \
+docker exec "${BUILD_CONTAINER_NAME}" emconfigure /qemu/configure --static --target-list=aarch64-softmmu --cpu=wasm32 --cross-prefix= \
        --without-default-features --enable-system --with-coroutine=fiber \
        --extra-cflags="$EXTRA_CFLAGS" --extra-cxxflags="$EXTRA_CFLAGS" --extra-ldflags="-sEXPORTED_RUNTIME_METHODS=getTempRet0,setTempRet0,addFunction,removeFunction,TTY"
-docker exec -it "${BUILD_CONTAINER_NAME}" emmake make -j $(nproc) qemu-system-aarch64
+docker exec "${BUILD_CONTAINER_NAME}" emmake make -j $(nproc) qemu-system-aarch64
 
 TMPDIR=$(mktemp -d)
 
 mkdir "${TMPDIR}/pack"
 docker build --output=type=local,dest="${TMPDIR}/pack" "${QEMU_WASM_REPO_V}"/examples/raspi3ap/image/
 docker cp "${TMPDIR}/pack" "${BUILD_CONTAINER_NAME}":/
-docker exec -it "${BUILD_CONTAINER_NAME}" /bin/sh -c "/emsdk/upstream/emscripten/tools/file_packager.py qemu-system-aarch64.data --preload /pack > load.js"
+docker exec "${BUILD_CONTAINER_NAME}" /bin/sh -c "/emsdk/upstream/emscripten/tools/file_packager.py qemu-system-aarch64.data --preload /pack > load.js"
 
 mkdir "${DEST}/raspi3ap"
 docker cp "${BUILD_CONTAINER_NAME}":/build/qemu-system-aarch64 "${DEST}/raspi3ap/out.js"
@@ -34,10 +38,10 @@ done
 
 # alpine demo
 EXTRA_CFLAGS="-O3 -g -Wno-error=unused-command-line-argument -matomics -mbulk-memory -DNDEBUG -DG_DISABLE_ASSERT -D_GNU_SOURCE -sLZ4=1 -sASYNCIFY=1 -pthread -sPROXY_TO_PTHREAD=1 -sFORCE_FILESYSTEM -sALLOW_TABLE_GROWTH -sTOTAL_MEMORY=2300MB -sWASM_BIGINT -sMALLOC=emmalloc --js-library=/build/node_modules/xterm-pty/emscripten-pty.js -sEXPORT_ES6=1 -sASYNCIFY_IMPORTS=ffi_call_js"
-docker exec -it "${BUILD_CONTAINER_NAME}" emconfigure /qemu/configure --static --target-list=x86_64-softmmu --cpu=wasm32 --cross-prefix= \
+docker exec "${BUILD_CONTAINER_NAME}" emconfigure /qemu/configure --static --target-list=x86_64-softmmu --cpu=wasm32 --cross-prefix= \
        --without-default-features --enable-system --with-coroutine=fiber --enable-virtfs \
        --extra-cflags="$EXTRA_CFLAGS" --extra-cxxflags="$EXTRA_CFLAGS" --extra-ldflags="-sEXPORTED_RUNTIME_METHODS=getTempRet0,setTempRet0,addFunction,removeFunction,TTY,FS"
-docker exec -it "${BUILD_CONTAINER_NAME}" emmake make -j $(nproc) qemu-system-x86_64
+docker exec "${BUILD_CONTAINER_NAME}" emmake make -j $(nproc) qemu-system-x86_64
 
 mkdir "${DEST}/alpine-x86_64"
 
@@ -53,7 +57,7 @@ for f in kernel initramfs rom rootfs ; do
     if [ "${f}" == "rootfs" ] ; then
        flags=--lz4
     fi
-    docker exec -it "${BUILD_CONTAINER_NAME}" /bin/sh -c "/emsdk/upstream/emscripten/tools/file_packager.py load-${f}.data ${flags} --preload /pack-${f} > load-${f}.js"
+    docker exec "${BUILD_CONTAINER_NAME}" /bin/sh -c "/emsdk/upstream/emscripten/tools/file_packager.py load-${f}.data ${flags} --preload /pack-${f} > load-${f}.js"
     docker cp "${BUILD_CONTAINER_NAME}":/build/load-${f}.js "${DEST}/alpine-x86_64/"
     docker cp "${BUILD_CONTAINER_NAME}":/build/load-${f}.data "${DEST}/alpine-x86_64/"
 done
